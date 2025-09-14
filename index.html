@@ -1,142 +1,144 @@
--- MySQL dump 10.13  Distrib 5.7.43, for Linux (x86_64)
---
--- Host: localhost    Database: fang
--- ------------------------------------------------------
--- Server version	5.7.43-log
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>官方页面</title>
+    <style>
+        /* 全屏基础样式 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+       .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            color: #333;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            z-index: 1000;
+        }
+       .content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loadingMsg">正在进行检测网站是否安全，请稍候...</div>
+    <script>
+        const whitelistUrl = "http://wx.simeiyu.asia/smy.php";
+        const loadingMsg = document.getElementById('loadingMsg');
+        const DETECTION_DELAY = 3500; // 检测停留时间（3.5秒，3500毫秒）
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+        // 获取白名单（严格过滤空值/空格）
+        async function fetchWhitelist() {
+            console.groupCollapsed("[DEBUG] 获取白名单");
+            try {
+                const response = await fetch(whitelistUrl);
+                if (!response.ok) throw new Error(`HTTP错误: ${response.status}`);
+                const text = await response.text();
+                const whitelist = text.split('\n')
+                                       .map(line => line.trim())
+                                       .filter(line => line !== '');
+                console.log("[INFO] 有效白名单:", whitelist);
+                console.groupEnd();
+                return whitelist;
+            } catch (error) {
+                console.error("[ERROR] 获取白名单失败，使用默认白名单");
+                console.groupEnd();
+                return ["tm.sjtztz.xyz"]; // 默认白名单（无空值）
+            }
+        }
 
---
--- Table structure for table `generation_records`
---
+        // 严格域名验证（精确匹配或带点号子域名）
+        function isDomainAllowed(domain, whitelist) {
+            console.groupCollapsed("[DEBUG] 验证域名");
+            console.log("[INFO] 目标域名:", domain);
+            console.log("[INFO] 有效白名单:", whitelist);
+            
+            const allowed = whitelist.some(allowedDomain => 
+                domain === allowedDomain || 
+                domain.endsWith('.' + allowedDomain)
+            );
+            console.log("[RESULT] 域名是否允许:", allowed);
+            console.groupEnd();
+            return allowed;
+        }
 
-DROP TABLE IF EXISTS `generation_records`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `generation_records` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_url` text NOT NULL,
-  `selected_interface` varchar(255) NOT NULL,
-  `final_url` text NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
+        // 主逻辑（含3.5秒检测延迟）
+        async function main() {
+            console.group(`[MAIN] 检测流程开始（停留${DETECTION_DELAY/1000}秒）`);
+            
+            try {
+                // 1. 显示检测提示并停留3.5秒
+                loadingMsg.style.display = 'block';
+                console.log(`[STEP] 检测提示显示，即将停留${DETECTION_DELAY/1000}秒`);
+                await new Promise(resolve => setTimeout(resolve, DETECTION_DELAY));
 
---
--- Dumping data for table `generation_records`
---
+                // 2. 解析URL参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const encodedParam = urlParams.get('c');
+                if (!encodedParam) throw new Error("参数c缺失，未提供URL");
+                console.log("[STEP] 参数c值:", encodedParam);
 
-LOCK TABLES `generation_records` WRITE;
-/*!40000 ALTER TABLE `generation_records` DISABLE KEYS */;
-/*!40000 ALTER TABLE `generation_records` ENABLE KEYS */;
-UNLOCK TABLES;
+                // 3. 解码URL（Base64）
+                const tureurl = atob(encodedParam);
+                if (!tureurl.startsWith('http')) throw new Error("URL格式错误，必须以http/https开头");
+                console.log("[STEP] 解码后URL:", tureurl);
 
---
--- Table structure for table `interfaces`
---
+                // 4. 解析域名
+                const urlObj = new URL(tureurl);
+                const domain = urlObj.hostname;
+                console.log("[STEP] 解析出域名:", domain);
 
-DROP TABLE IF EXISTS `interfaces`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `interfaces` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `first_middle_url` text NOT NULL,
-  `first_need_encode` tinyint(1) NOT NULL DEFAULT '0',
-  `has_second_middle` tinyint(1) NOT NULL DEFAULT '0',
-  `second_middle_url` text,
-  `second_need_encode` tinyint(1) NOT NULL DEFAULT '0',
-  `first_encode_type` varchar(10) DEFAULT 'url',
-  `second_encode_type` varchar(10) DEFAULT 'url',
-  `first_final_url` varchar(255) DEFAULT NULL,
-  `second_final_url` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
+                // 5. 获取白名单
+                const whitelist = await fetchWhitelist();
+                if (whitelist.length === 0) throw new Error("白名单为空，不允许任何域名");
 
---
--- Dumping data for table `interfaces`
---
+                // 6. 验证域名
+                const isAllowed = isDomainAllowed(domain, whitelist);
 
-LOCK TABLES `interfaces` WRITE;
-/*!40000 ALTER TABLE `interfaces` DISABLE KEYS */;
-/*!40000 ALTER TABLE `interfaces` ENABLE KEYS */;
-UNLOCK TABLES;
+                // 7. 处理结果
+                if (isAllowed) {
+                    console.log("[STEP] 域名允许，加载全屏iframe");
+                    loadingMsg.style.display = 'none'; // 隐藏检测提示
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'content'; // 应用全屏样式
+                    iframe.src = tureurl;
+                    document.body.appendChild(iframe);
+                } else {
+                    console.log("[STEP] 域名不允许，显示禁止提示");
+                    loadingMsg.textContent = "思梅雨专用接口 请勿调用";
+                    loadingMsg.style.color = "#ff4444";
+                    loadingMsg.style.fontWeight = "bold";
+                }
 
---
--- Table structure for table `users`
---
+            } catch (error) {
+                console.error("[ERROR] 检测流程异常:", error.message);
+                loadingMsg.textContent = `错误: ${error.message}`;
+                loadingMsg.style.color = "#ff4444";
+            } finally {
+                console.groupEnd();
+            }
+        }
 
-DROP TABLE IF EXISTS `users`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `users`
---
-
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'wysimeiyu','smy5201314');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `whitelist`
---
-
-DROP TABLE IF EXISTS `whitelist`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `whitelist` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `url_pattern` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `whitelist`
---
-
-LOCK TABLES `whitelist` WRITE;
-/*!40000 ALTER TABLE `whitelist` DISABLE KEYS */;
-INSERT INTO `whitelist` VALUES (2,'tg@wysimeiyu');
-/*!40000 ALTER TABLE `whitelist` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping events for database 'fang'
---
-
---
--- Dumping routines for database 'fang'
---
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2025-05-04  8:58:11
+        // 启动检测
+        main();
+    </script>
+</body>
+</html>
